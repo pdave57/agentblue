@@ -270,6 +270,9 @@ async function request<T>(
   if (contentType.includes('application/json')) {
     return (await res.json()) as T;
   }
+  if (contentType.includes('application/pdf') || contentType.includes('application/octet-stream')) {
+    return (await res.blob()) as T;
+  }
   return (await res.text()) as unknown as T;
 }
 

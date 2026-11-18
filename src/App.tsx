@@ -9,6 +9,7 @@ import {
   streamQuestions,
   streamAssessmentResult,
   fetchAssessmentResult,
+  getReportPdf,
   type AssessmentStartRequest,
   type RecommendationItem,
   type AssessmentResult,
@@ -50,6 +51,7 @@ function AssessmentApp() {
   const [motionText, setMotionText] = useState('');
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [reportId, setReportId] = useState<string | null>(null);
+  const [downloadingReport, setDownloadingReport] = useState(false);
 
   const controllerRef = useRef<ReturnType<typeof streamQuestions> | null>(null);
   const resultStreamRef = useRef<ReturnType<typeof streamAssessmentResult> | null>(null);
@@ -75,6 +77,7 @@ function AssessmentApp() {
     setMotionText('');
     setRecommendations([]);
     setReportId(null);
+    setDownloadingReport(false);
     setView('intro');
     setLoading(false);
     runIdRef.current += 1;
@@ -443,6 +446,32 @@ function AssessmentApp() {
     navigate('/login');
   };
 
+  const handleDownloadReport = async () => {
+    if (!reportId) return;
+
+    setDownloadingReport(true);
+    setError(null);
+    try {
+      const blob = await getReportPdf(reportId);
+      if (!(blob instanceof Blob) || blob.size === 0) {
+        throw new Error('The server returned an empty PDF report');
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `agent-bleu-report-${reportId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download PDF report');
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
   return (
     <div className="app">
       <header className="header">
@@ -702,13 +731,23 @@ function AssessmentApp() {
                   {result.llm_model && <span>Model: {result.llm_model}</span>}
                   <span>Synthesized by PsychemetreAI Orchestration Agent • Verified Non-Diagnostic</span>
                 </div>
+
+                <div className="result-actions">
+                  {reportId && (
+                    <button
+                      className="btn"
+                      onClick={handleDownloadReport}
+                      disabled={downloadingReport}
+                    >
+                      {downloadingReport ? 'Preparing PDF…' : 'Download PDF report'}
+                    </button>
+                  )}
+                  <button className="btn ghost" id="restart" onClick={handleRestart}>
+                    Retake analysis
+                  </button>
+                </div>
               </>
             ) : null}
-            {result && (
-              <button className="btn ghost" id="restart" onClick={handleRestart}>
-                Retake analysis
-              </button>
-            )}
           </section>
         )}
 

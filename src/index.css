@@ -275,8 +275,11 @@ button{font:inherit;color:inherit}
 }
 .rec-actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
 }
 .rec-btn {
   font-size: 0.85rem;
