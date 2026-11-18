@@ -18,6 +18,7 @@ import { useAuth } from './context/AuthContext';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Landing from './pages/Landing';
 import './App.css';
 
 type View = 'intro' | 'quiz' | 'result';
@@ -783,7 +784,7 @@ function App() {
         <Route
           path="/"
           element={
-            authenticated ? <AssessmentApp /> : <Navigate to="/login" replace />
+            authenticated ? <AssessmentApp /> : <Landing />
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
