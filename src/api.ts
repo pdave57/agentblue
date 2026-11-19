@@ -7,7 +7,7 @@
  * All paths are versioned under /api/v1 unless noted otherwise.
  */
 
-export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
+export const API_BASE = import.meta.env.VITE_API_BASE ?? 'https://psychemetric-ai.onrender.com';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -61,6 +61,7 @@ export interface AssessmentStartRequest {
   user_id: string;
   instrument_code?: string;
   instrument_version?: string;
+  resume_if_active?: boolean;
 }
 
 export interface AnswerSubmitRequest {
@@ -68,11 +69,47 @@ export interface AnswerSubmitRequest {
   value: number; // Likert 1–5
 }
 
+export interface QuestionOption {
+  id?: string;
+  code?: string;
+  text: string;
+  value?: number;
+  label?: string;
+  [key: string]: unknown;
+}
+
 export interface Question {
   id: string;
   code?: string;
   text: string;
-  options?: Array<{ id: string; text: string; [key: string]: unknown }>;
+  area?: string;
+  kind?: string;
+  dimension?: string;
+  reverse_coded?: boolean;
+  sort_order?: number;
+  options?: QuestionOption[];
+  [key: string]: unknown;
+}
+
+export interface AnswerRecord {
+  question_id: string;
+  likert_value: number;
+  seq: number;
+}
+
+export interface AssessmentProgressResponse {
+  session_id: string;
+  user_id: string;
+  status: string;
+  instrument_code: string;
+  instrument_version: string;
+  total_questions: number;
+  answered_count: number;
+  remaining_count: number;
+  progress_percentage: number;
+  next_question?: Record<string, unknown> | null;
+  answers?: AnswerRecord[];
+  resumed?: boolean;
 }
 
 export interface EmotionSelfReportRequest {
@@ -340,6 +377,18 @@ export function getTemperamentCatalog(): Promise<unknown> {
   });
 }
 
+export function getTemperament20Catalog(): Promise<unknown> {
+  return request<unknown>('/api/v1/catalogue/knowledge-pack/temperament-20', {
+    method: 'GET',
+  });
+}
+
+export function getTemperament40Catalog(): Promise<unknown> {
+  return request<unknown>('/api/v1/catalogue/knowledge-pack/temperament-40', {
+    method: 'GET',
+  });
+}
+
 export function getEqCatalog(): Promise<unknown> {
   return request<unknown>('/api/v1/catalogue/knowledge-pack/emotional-intelligence', {
     method: 'GET',
@@ -379,6 +428,33 @@ export function completeAssessment(sessionId: string): Promise<unknown> {
   return request<unknown>(`/api/v1/assessments/${sessionId}/complete`, {
     method: 'POST',
   });
+}
+
+export function getAssessmentProgress(
+  sessionId: string,
+): Promise<AssessmentProgressResponse> {
+  return request<AssessmentProgressResponse>(
+    `/api/v1/assessments/${sessionId}/progress`,
+    { method: 'GET' },
+  );
+}
+
+export function resumeAssessment(
+  sessionId: string,
+): Promise<AssessmentProgressResponse> {
+  return request<AssessmentProgressResponse>(
+    `/api/v1/assessments/${sessionId}/resume`,
+    { method: 'GET' },
+  );
+}
+
+export function getActiveAssessment(
+  userId: string,
+): Promise<AssessmentProgressResponse> {
+  return request<AssessmentProgressResponse>(
+    `/api/v1/assessments/user/${userId}/active`,
+    { method: 'GET' },
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -584,6 +660,18 @@ export function compareSessions(sessionId1: string, sessionId2: string): Promise
 /* ------------------------------------------------------------------ */
 /* Agent orchestration                                                */
 /* ------------------------------------------------------------------ */
+
+export interface NarrativeSampleRequest {
+  user_id?: string;
+  scores?: Array<Record<string, unknown>> | null;
+}
+
+export function generateSampleNarrative(data?: NarrativeSampleRequest): Promise<unknown> {
+  return request<unknown>('/api/v1/agents/narrative/sample', {
+    method: 'POST',
+    body: JSON.stringify(data ?? {}),
+  });
+}
 
 export function runAgentStep(data: AgentStepRequest): Promise<unknown> {
   return request<unknown>('/api/v1/agents/step', {

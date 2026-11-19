@@ -43,7 +43,7 @@ export default function Landing() {
             </button>
           </div>
           <p className="landing-hero-note">
-            Takes&nbsp;~&nbsp;8&nbsp;minutes&nbsp;·&nbsp;No medical diagnosis&nbsp;·&nbsp;Data stays private
+            Takes&nbsp;~&nbsp;3–4&nbsp;minutes&nbsp;·&nbsp;No medical diagnosis&nbsp;·&nbsp;Data stays private
           </p>
           </div>
         </div>
@@ -57,8 +57,8 @@ export default function Landing() {
             {[
               {
                 n: '01',
-                title: 'Answer 40 questions',
-                body: 'Each statement is drawn from the PsychemetreAI temperament instrument. There are no right or wrong answers — just respond from instinct.',
+                title: 'Answer 20 questions',
+                body: 'Each statement is drawn from the PsychemetreAI 20-item classical temperament inventory. There are no right or wrong answers — just respond from instinct.',
               },
               {
                 n: '02',
@@ -208,7 +208,7 @@ export default function Landing() {
         <div className="landing-section-inner landing-cta-center">
           <h2 className="landing-h2">Ready to meet yourself?</h2>
           <p className="landing-section-lead">
-            It takes about 8 minutes. Your results are private, yours to keep, and
+            It takes about 3–4 minutes. Your results are private, yours to keep, and
             always available to delete.
           </p>
           <button className="btn landing-cta-primary" onClick={() => navigate('/register')}>

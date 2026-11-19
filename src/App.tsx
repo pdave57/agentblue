@@ -36,11 +36,61 @@ interface TemperamentResult {
   prompt_version?: string;
 }
 
+const LIKERT_WEIGHTS: Record<string, number> = {
+  strongly_disagree: 1,
+  disagree: 2,
+  neutral: 3,
+  neither_agree_nor_disagree: 3,
+  agree: 4,
+  strongly_agree: 5,
+};
+
+function normalizeOptions(rawOpts?: any[]): Array<{ id: string; text: string }> {
+  if (!Array.isArray(rawOpts) || rawOpts.length === 0) {
+    return [
+      { id: '1', text: 'Strongly disagree' },
+      { id: '2', text: 'Disagree' },
+      { id: '3', text: 'Neutral' },
+      { id: '4', text: 'Agree' },
+      { id: '5', text: 'Strongly agree' },
+    ];
+  }
+
+  const mapped = rawOpts.map((opt: any, i: number) => {
+    let id: string;
+    if (opt.value !== undefined && opt.value !== null) {
+      id = String(opt.value);
+    } else if (opt.code && LIKERT_WEIGHTS[String(opt.code).toLowerCase()]) {
+      id = String(LIKERT_WEIGHTS[String(opt.code).toLowerCase()]);
+    } else {
+      id = String(opt.id ?? (i + 1));
+    }
+    const text = opt.text ?? opt.label ?? opt.code ?? '';
+    return { id, text };
+  });
+
+  const allNumeric = mapped.every((o) => !isNaN(Number(o.id)));
+  if (allNumeric) {
+    mapped.sort((a, b) => Number(a.id) - Number(b.id));
+  }
+  return mapped;
+}
+
+interface QuestionItem {
+  id: string;
+  code?: string;
+  dimension?: string;
+  area?: string;
+  reverse_coded?: boolean;
+  text: string;
+  options: Array<{ id: string; text: string }>;
+}
+
 function AssessmentApp() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [view, setView] = useState<View>('intro');
-  const [questions, setQuestions] = useState<Array<{ id: string; text: string; options: Array<{ id: string; text: string }> }>>([]);
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [index, setIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -105,9 +155,10 @@ function AssessmentApp() {
 
     try {
       const body: AssessmentStartRequest = {
-        user_id: `user_${Date.now()}`,
-        instrument_code: 'psychemetre_temperament_40',
+        user_id: user?.user_id || `user_${Date.now()}`,
+        instrument_code: 'psychemetre_temperament_20',
         instrument_version: '1.0.0',
+        resume_if_active: true,
       };
 
       const data = await startAssessment(body);
@@ -126,23 +177,33 @@ function AssessmentApp() {
         setQuestions(
           rawQs.map((q: any) => ({
             id: String(q.id),
+            code: q.code,
+            dimension: q.dimension,
+            area: q.area,
+            reverse_coded: q.reverse_coded,
             text: q.text ?? '',
-            options: Array.isArray(q.options) && q.options.length > 0
-              ? q.options.map((opt: any, i: number) => ({
-                  id: String(opt.value ?? (i + 1)),
-                  text: opt.text ?? opt.label ?? opt.code ?? '',
-                }))
-              : [
-                  { id: '1', text: 'Strongly disagree' },
-                  { id: '2', text: 'Disagree' },
-                  { id: '3', text: 'Neutral' },
-                  { id: '4', text: 'Agree' },
-                  { id: '5', text: 'Strongly agree' },
-                ],
+            options: normalizeOptions(q.options),
           }))
         );
       } else {
         setQuestions([]);
+      }
+
+      // Check if resuming existing answers
+      if (Array.isArray((data as any).answers) && (data as any).answers.length > 0) {
+        const restored: Record<string, string> = {};
+        for (const a of (data as any).answers) {
+          if (a.question_id) {
+            restored[String(a.question_id)] = String(a.likert_value);
+          }
+        }
+        setAnswers(restored);
+        if (Array.isArray(rawQs) && rawQs.length > 0) {
+          const nextIdx = rawQs.findIndex((q: any) => !restored[String(q.id)]);
+          if (nextIdx >= 0) {
+            setIndex(nextIdx);
+          }
+        }
       }
 
       openStream(sid, runId);
@@ -166,19 +227,7 @@ function AssessmentApp() {
         if (runId !== runIdRef.current) return;
 
         if (event.type === 'question') {
-          const rawOpts = (event.options as any[]) || [];
-          const opts = rawOpts.length > 0
-            ? rawOpts.map((opt: any, i: number) => ({
-                id: String(opt.value ?? (i + 1)),
-                text: opt.text ?? opt.label ?? opt.code ?? '',
-              }))
-            : [
-                { id: '1', text: 'Strongly disagree' },
-                { id: '2', text: 'Disagree' },
-                { id: '3', text: 'Neutral' },
-                { id: '4', text: 'Agree' },
-                { id: '5', text: 'Strongly agree' },
-              ];
+          const opts = normalizeOptions(event.options as any[]);
 
           setQuestions((prev) => {
             const existing = prev.find((q) => q.id === String(event.id));
@@ -187,6 +236,10 @@ function AssessmentApp() {
                 q.id === String(event.id)
                   ? {
                       ...q,
+                      code: (event as any).code ?? q.code,
+                      dimension: (event as any).dimension ?? q.dimension,
+                      area: (event as any).area ?? q.area,
+                      reverse_coded: (event as any).reverse_coded ?? q.reverse_coded,
                       text: event.text || q.text,
                       options: q.options.length > 0 ? q.options : opts,
                     }
@@ -197,6 +250,10 @@ function AssessmentApp() {
               ...prev,
               {
                 id: String(event.id),
+                code: (event as any).code,
+                dimension: (event as any).dimension,
+                area: (event as any).area,
+                reverse_coded: (event as any).reverse_coded,
                 text: event.text ?? '',
                 options: opts,
               },
@@ -241,17 +298,25 @@ function AssessmentApp() {
   const analyseLocally = () => {
     const totals: Record<string, number> = { Sanguine: 0, Choleric: 0, Melancholic: 0, Phlegmatic: 0 };
     const counts: Record<string, number> = { Sanguine: 0, Choleric: 0, Melancholic: 0, Phlegmatic: 0 };
+    const itemsPerDim = Math.max(1, Math.floor(questions.length / 4));
 
     questions.forEach((q, i) => {
       const val = parseInt(answers[q.id] || '3', 10);
       let dim = 'Sanguine';
-      const code = ((q as any).code || '').toUpperCase();
-      if (code.startsWith('SAN') || (!code && i < 10)) dim = 'Sanguine';
-      else if (code.startsWith('CHO') || (!code && i < 20)) dim = 'Choleric';
-      else if (code.startsWith('MEL') || (!code && i < 30)) dim = 'Melancholic';
-      else if (code.startsWith('PHL') || (!code && i < 40)) dim = 'Phlegmatic';
+      const code = (q.code || '').toUpperCase();
+      const rawDim = (q.dimension || '').toLowerCase();
 
-      const reverse = (q as any).reverse_coded || (code && (code.endsWith('04') || code.endsWith('08')));
+      if (rawDim.startsWith('sang') || code.startsWith('SAN') || (!code && !rawDim && i < itemsPerDim)) {
+        dim = 'Sanguine';
+      } else if (rawDim.startsWith('chol') || code.startsWith('CHO') || (!code && !rawDim && i < itemsPerDim * 2)) {
+        dim = 'Choleric';
+      } else if (rawDim.startsWith('mela') || code.startsWith('MEL') || (!code && !rawDim && i < itemsPerDim * 3)) {
+        dim = 'Melancholic';
+      } else if (rawDim.startsWith('phle') || code.startsWith('PHL') || (!code && !rawDim && i < itemsPerDim * 4)) {
+        dim = 'Phlegmatic';
+      }
+
+      const reverse = q.reverse_coded || (code && (code.endsWith('04') || code.endsWith('08')));
       const score = reverse ? (6 - val) : val;
       totals[dim] += score;
       counts[dim] += 1;
@@ -259,8 +324,8 @@ function AssessmentApp() {
 
     const scores: Record<string, number> = {};
     for (const dim of ['Sanguine', 'Choleric', 'Melancholic', 'Phlegmatic']) {
-      const count = counts[dim] || 10;
-      const mean = (totals[dim] || 30) / count;
+      const count = counts[dim] || itemsPerDim || 5;
+      const mean = (totals[dim] || (count * 3)) / count;
       scores[dim] = Math.max(0, Math.min(100, Math.round(((mean - 1) / 4) * 100)));
     }
 
