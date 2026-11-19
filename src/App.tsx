@@ -19,6 +19,8 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
+import ClarificationAgent from './components/ClarificationAgent';
+
 import './App.css';
 
 type View = 'intro' | 'quiz' | 'result';
@@ -726,6 +728,13 @@ function AssessmentApp() {
                     </p>
                   )}
                 </section>
+
+                {/* Conversational AI Agent for Clarification */}
+                <ClarificationAgent
+                  sessionId={sessionId}
+                  result={result}
+                  reportId={reportId}
+                />
 
                 <div className="result-meta">
                   {reportId && <span>Report {reportId}</span>}
