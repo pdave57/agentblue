@@ -118,7 +118,7 @@ I'm here to help you unpack what this means. What would you like to explore or c
 
       // 2. If backend didn't supply text, use the comprehensive context-aware clarification engine
       if (!agentReplyText) {
-        agentReplyText = generateLocalClarification(trimmed, result);
+        agentReplyText = generateLocalClarification(trimmed, result, reportId);
       }
 
       const agentMessage: Message = {
@@ -355,10 +355,17 @@ function formatTime(date: Date): string {
 /* ------------------------------------------------------------------ */
 /* Knowledge-rich Context-Aware Clarification Engine (Fallback/Local) */
 /* ------------------------------------------------------------------ */
-function generateLocalClarification(query: string, result: TemperamentResult): string {
+function generateLocalClarification(
+  query: string,
+  result: TemperamentResult,
+  reportId?: string | null,
+): string {
   const q = query.toLowerCase();
   const dominant = result.dominant || 'Sanguine';
   const scores = result.scores || {};
+  const scoresSummary = Object.entries(scores)
+    .map(([k, v]) => `${k}: ${v}%`)
+    .join(', ');
   const recs = result.recommendations || [];
 
   // Ranked order of dimensions
@@ -560,7 +567,7 @@ You are not locked into a rigid box—your scores represent fluid behavioral pre
 • **What to try:** ${body}
 • **Application:** Start with one small, low-friction habit (e.g. 5 minutes a day) rather than attempting a total overhaul.
 
-You can also download your full **PDF Report** above to review the complete scientific methodology and score metrics!`;
+You can also download your full **PDF Report** ${reportId ? `(ID: ${reportId}) ` : ''}above to review the complete scientific methodology and score metrics!`;
     }
 
     return `Your recommendations are customized to your scores across the four dimensions (${scoresSummary}). You can review them in the Recommendations section above or ask me about any specific trait you want to cultivate!`;
