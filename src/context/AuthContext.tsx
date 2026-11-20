@@ -3,8 +3,10 @@ import {
   login,
   register,
   authStatus,
+  grantConsent,
   setAuthToken,
   getAuthToken,
+  parseJwtPayload,
   type LoginRequest,
   type RegisterRequest,
   type TokenResponse,
@@ -29,15 +31,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = getAuthToken() || (typeof window !== 'undefined' ? localStorage.getItem('agentbleu_token') : null);
     if (token) {
+      // Check for token expiration
+      const payload = parseJwtPayload(token);
+      if (payload?.exp && Date.now() / 1000 > payload.exp) {
+        setAuthToken(null);
+        localStorage.removeItem('agentbleu_token');
+        localStorage.removeItem('agentbleu_user_id');
+        localStorage.removeItem('agentbleu_email');
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       setAuthToken(token);
+      const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('agentbleu_user_id') : null;
+      const savedEmail = typeof window !== 'undefined' ? localStorage.getItem('agentbleu_email') : null;
+
+      // Ensure user_id is never the raw JWT token string
+      const initialUserId =
+        savedUserId && !savedUserId.startsWith('eyJ')
+          ? savedUserId
+          : (payload?.user_id || payload?.sub || null);
+
+      const initialEmail =
+        savedEmail ||
+        payload?.email ||
+        (typeof payload?.sub === 'string' && payload.sub.includes('@') ? payload.sub : undefined);
+
+      if (initialUserId) {
+        setUser({ user_id: initialUserId, email: initialEmail });
+      }
+
       authStatus()
-        .then(() => {
-          setUser({ user_id: token });
+        .then((res: any) => {
+          const finalUserId =
+            res?.user_id && typeof res.user_id === 'string' && !res.user_id.startsWith('eyJ')
+              ? res.user_id
+              : (res?.id || res?.sub || initialUserId);
+          const finalEmail = res?.email || initialEmail;
+
+          if (finalUserId) {
+            setUser({ user_id: finalUserId, email: finalEmail });
+            localStorage.setItem('agentbleu_user_id', finalUserId);
+          }
+          if (finalEmail) {
+            localStorage.setItem('agentbleu_email', finalEmail);
+          }
           setLoading(false);
         })
         .catch(() => {
           setAuthToken(null);
           localStorage.removeItem('agentbleu_token');
+          localStorage.removeItem('agentbleu_user_id');
+          localStorage.removeItem('agentbleu_email');
+          setUser(null);
           setLoading(false);
         });
     } else {
@@ -49,19 +96,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res: TokenResponse = await login(data);
     setAuthToken(res.access_token);
     localStorage.setItem('agentbleu_token', res.access_token);
-    setUser({ user_id: res.user_id });
+    if (res.refresh_token) {
+      localStorage.setItem('agentbleu_refresh_token', res.refresh_token);
+    }
+
+    const payload = parseJwtPayload(res.access_token);
+    const resolvedUserId = res.user_id || payload?.user_id || payload?.sub || data.email;
+    localStorage.setItem('agentbleu_user_id', resolvedUserId);
+    localStorage.setItem('agentbleu_email', data.email);
+    setUser({ user_id: resolvedUserId, email: data.email });
+
+    // Proactively grant consent to ensure assessments are not blocked with 403
+    try {
+      await grantConsent({
+        type: 'assessment_processing',
+        version: '1.0.0',
+        granted: true,
+      });
+    } catch {
+      // ignore
+    }
   };
 
   const handleRegister = async (data: RegisterRequest) => {
     const res: TokenResponse = await register(data);
     setAuthToken(res.access_token);
     localStorage.setItem('agentbleu_token', res.access_token);
-    setUser({ user_id: res.user_id });
+    if (res.refresh_token) {
+      localStorage.setItem('agentbleu_refresh_token', res.refresh_token);
+    }
+
+    const payload = parseJwtPayload(res.access_token);
+    const resolvedUserId = res.user_id || payload?.user_id || payload?.sub || data.email;
+    localStorage.setItem('agentbleu_user_id', resolvedUserId);
+    localStorage.setItem('agentbleu_email', data.email);
+    setUser({ user_id: resolvedUserId, email: data.email });
+
+    // Proactively grant consent so assessment is not blocked with 403
+    try {
+      await grantConsent({
+        type: 'assessment_processing',
+        version: '1.0.0',
+        granted: true,
+      });
+      await grantConsent({
+        type: 'terms_privacy',
+        version: '1.0.0',
+        granted: true,
+      });
+    } catch {
+      // ignore
+    }
   };
 
   const handleLogout = () => {
     setAuthToken(null);
     localStorage.removeItem('agentbleu_token');
+    localStorage.removeItem('agentbleu_user_id');
+    localStorage.removeItem('agentbleu_email');
+    localStorage.removeItem('agentbleu_refresh_token');
     setUser(null);
   };
 

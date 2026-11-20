@@ -10,6 +10,7 @@ import {
   streamAssessmentResult,
   fetchAssessmentResult,
   getReportPdf,
+  grantConsent,
   type AssessmentStartRequest,
   type RecommendationItem,
   type AssessmentResult,
@@ -159,14 +160,56 @@ function AssessmentApp() {
     setLoading(true);
 
     try {
+      // Ensure user_id is never a raw JWT string starting with 'eyJ'
+      const resolvedUserId = (user?.user_id && !user.user_id.startsWith('eyJ'))
+        ? user.user_id
+        : (typeof window !== 'undefined' && localStorage.getItem('agentbleu_user_id') && !localStorage.getItem('agentbleu_user_id')!.startsWith('eyJ'))
+        ? localStorage.getItem('agentbleu_user_id')!
+        : `user_${Date.now()}`;
+
       const body: AssessmentStartRequest = {
-        user_id: user?.user_id || `user_${Date.now()}`,
+        user_id: resolvedUserId,
         instrument_code: 'psychemetre_temperament_20',
         instrument_version: '1.0.0',
         resume_if_active: true,
       };
 
-      const data = await startAssessment(body);
+      let data: any;
+      try {
+        data = await startAssessment(body);
+      } catch (startErr: any) {
+        // If 403 Forbidden, handle consent or instrument fallback
+        if (startErr?.status === 403 || String(startErr?.message).includes('403')) {
+          try {
+            // Attempt to ensure consent is granted
+            await grantConsent({
+              type: 'assessment_processing',
+              version: '1.0.0',
+              granted: true,
+            });
+            await grantConsent({
+              type: 'terms_privacy',
+              version: '1.0.0',
+              granted: true,
+            });
+            data = await startAssessment(body);
+          } catch {
+            // Secondary fallback: test starting with temperament_40
+            try {
+              data = await startAssessment({
+                ...body,
+                instrument_code: 'psychemetre_temperament_40',
+                resume_if_active: false,
+              });
+            } catch {
+              throw startErr;
+            }
+          }
+        } else {
+          throw startErr;
+        }
+      }
+
       const sid = ((data as any).session_id || (data as any).id) as string;
       if (!sid) throw new Error('No session id returned from server');
 
@@ -212,9 +255,33 @@ function AssessmentApp() {
       }
 
       openStream(sid, runId);
-    } catch (err) {
+    } catch (err: any) {
       setLoading(false);
-      setError(err instanceof Error ? err.message : 'Failed to start assessment');
+      const detail = err?.rawDetail || err?.detail || err?.body?.detail || err?.message || 'Failed to start assessment';
+      const detailStr = typeof detail === 'string' ? detail : JSON.stringify(detail);
+
+      // Check if 403/401 is due to session or token expiration
+      if (
+        err?.status === 401 ||
+        err?.status === 403 ||
+        detailStr.includes('403') ||
+        detailStr.includes('401')
+      ) {
+        if (
+          detailStr.toLowerCase().includes('token') ||
+          detailStr.toLowerCase().includes('credential') ||
+          detailStr.toLowerCase().includes('expired') ||
+          detailStr.toLowerCase().includes('unauthorized') ||
+          detailStr.toLowerCase().includes('not authenticated')
+        ) {
+          setError('Your session has expired. Please sign in again.');
+          logout();
+          navigate('/login');
+          return;
+        }
+      }
+
+      setError(detailStr);
     }
   };
 

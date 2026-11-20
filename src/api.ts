@@ -213,23 +213,52 @@ export interface HTTPValidationError {
   }>;
 }
 
+export function parseJwtPayload(token: string): Record<string, any> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+export function extractErrorDetail(body: unknown): string | undefined {
+  if (!body) return undefined;
+  if (typeof body === 'string' && body.trim()) return body.trim();
+  if (typeof body === 'object') {
+    const b = body as Record<string, any>;
+    if (typeof b.detail === 'string') return b.detail;
+    if (Array.isArray(b.detail) && b.detail[0]?.msg) return b.detail[0].msg;
+    if (typeof b.message === 'string') return b.message;
+    if (typeof b.error === 'string') return b.error;
+  }
+  return undefined;
+}
+
 export class ApiError extends Error {
   public status: number;
   public body?: unknown;
+  public rawDetail?: string;
+
   constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
+    this.rawDetail = extractErrorDetail(body);
   }
 
   get detail(): string | undefined {
-    if (this.body && typeof this.body === 'object') {
-      const b = this.body as Record<string, any>;
-      if (typeof b.detail === 'string') return b.detail;
-      if (Array.isArray(b.detail) && b.detail[0]?.msg) return b.detail[0].msg;
-    }
-    return undefined;
+    return this.rawDetail || extractErrorDetail(this.body);
   }
 }
 
@@ -300,7 +329,24 @@ async function request<T>(
     } catch {
       body = await res.text();
     }
-    throw new ApiError(res.status, `API error ${res.status}`, body);
+    const detail = extractErrorDetail(body);
+    const message = detail ? `API error ${res.status}: ${detail}` : `API error ${res.status}`;
+
+    // If unauthorized or credential failure, clear stale token
+    if (res.status === 401 || (res.status === 403 && (
+      detail?.toLowerCase().includes('token') ||
+      detail?.toLowerCase().includes('credential') ||
+      detail?.toLowerCase().includes('expired') ||
+      detail?.toLowerCase().includes('not authenticated')
+    ))) {
+      setAuthToken(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('agentbleu_token');
+        localStorage.removeItem('agentbleu_user_id');
+      }
+    }
+
+    throw new ApiError(res.status, message, body);
   }
 
   const contentType = res.headers.get('content-type') ?? '';
