@@ -1,28 +1,65 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { authenticated } = useAuth();
+
+  const handleLogoClick = () => {
+    navigate('/landing');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="landing">
       {/* ── Nav ── */}
       <nav className="landing-nav">
-        <img src={logo} alt="Agent Bleu" className="landing-nav-logo" />
+        <img
+          src={logo}
+          alt="Agent Bleu"
+          className="landing-nav-logo"
+          onClick={handleLogoClick}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleLogoClick();
+            }
+          }}
+          title="Agent Bleu Home"
+        />
         <div className="landing-nav-actions">
-          <button className="btn ghost" onClick={() => navigate('/login')}>
-            Sign in
-          </button>
-          <button className="btn" onClick={() => navigate('/register')}>
-            Get started
-          </button>
+          {authenticated ? (
+            <button className="btn" onClick={() => navigate('/')}>
+              Go to Assessment
+            </button>
+          ) : (
+            <>
+              <button className="btn ghost" onClick={() => navigate('/login')}>
+                Sign in
+              </button>
+              <button className="btn" onClick={() => navigate('/register')}>
+                Get started
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
       {/* ── Hero ── */}
       <section className="landing-hero">
         <div className="landing-hero-inner">
-          <img src={logo} alt="Agent Bleu" className="landing-hero-logo" />
+          <img
+            src={logo}
+            alt="Agent Bleu"
+            className="landing-hero-logo"
+            onClick={handleLogoClick}
+            role="button"
+            tabIndex={0}
+            title="Agent Bleu Home"
+          />
           <div className="landing-hero-text">
           <span className="landing-badge">AI-Powered Personality Assessment</span>
           <h1 className="landing-h1">
@@ -35,12 +72,20 @@ export default function Landing() {
             your dominant temperament — with zero judgment and full respect for your privacy.
           </p>
           <div className="landing-hero-cta">
-            <button className="btn landing-cta-primary" onClick={() => navigate('/register')}>
-              Start your free assessment
-            </button>
-            <button className="btn ghost" onClick={() => navigate('/login')}>
-              I already have an account
-            </button>
+            {authenticated ? (
+              <button className="btn landing-cta-primary" onClick={() => navigate('/')}>
+                Go to your assessment
+              </button>
+            ) : (
+              <>
+                <button className="btn landing-cta-primary" onClick={() => navigate('/register')}>
+                  Start your free assessment
+                </button>
+                <button className="btn ghost" onClick={() => navigate('/login')}>
+                  I already have an account
+                </button>
+              </>
+            )}
           </div>
           <p className="landing-hero-note">
             Takes&nbsp;~&nbsp;3–4&nbsp;minutes&nbsp;·&nbsp;No medical diagnosis&nbsp;·&nbsp;Data stays private
@@ -211,17 +256,37 @@ export default function Landing() {
             It takes about 3–4 minutes. Your results are private, yours to keep, and
             always available to delete.
           </p>
-          <button className="btn landing-cta-primary" onClick={() => navigate('/register')}>
-            Begin your assessment — it's free
-          </button>
+          {authenticated ? (
+            <button className="btn landing-cta-primary" onClick={() => navigate('/')}>
+              Continue to assessment
+            </button>
+          ) : (
+            <button className="btn landing-cta-primary" onClick={() => navigate('/register')}>
+              Begin your assessment — it's free
+            </button>
+          )}
         </div>
       </section>
 
       {/* ── Footer ── */}
       <footer className="landing-footer">
-        <img src={logo} alt="Agent Bleu" className="landing-footer-logo" />
+        <img
+          src={logo}
+          alt="Agent Bleu"
+          className="landing-footer-logo"
+          onClick={handleLogoClick}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleLogoClick();
+            }
+          }}
+          title="Agent Bleu Home"
+        />
         <p className="landing-footer-copy">
-          © {new Date().getFullYear()} Agent Bleu · Powered by Dacom Technology ·{' '}
+          © 2026 Agent Bleu · Powered by Dacom Technology ·{' '}
           <a href="#privacy">Privacy notice</a>
         </p>
       </footer>
