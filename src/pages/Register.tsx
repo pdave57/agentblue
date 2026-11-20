@@ -49,7 +49,21 @@ export default function Register() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <img src={logo} alt="Agent Bleu" className="auth-logo" />
+        <img
+          src={logo}
+          alt="Agent Bleu"
+          className="auth-logo"
+          onClick={() => navigate('/')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/');
+            }
+          }}
+          title="Back to Landing Page"
+        />
         <h1>Create account</h1>
         <p>Join Agent Bleu to start your personality assessment</p>
         {error && <div className="err" role="alert">{error}</div>}

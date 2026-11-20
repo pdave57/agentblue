@@ -32,6 +32,16 @@ button{font:inherit;color:inherit}
   width:min(22rem,80vw);
   height:auto;
   mix-blend-mode:multiply;
+  cursor:pointer;
+  transition:opacity 0.15s ease, transform 0.15s ease;
+}
+.header-logo:hover,
+.landing-nav-logo:hover,
+.landing-hero-logo:hover,
+.landing-footer-logo:hover,
+.auth-logo:hover {
+  opacity:0.88;
+  transform:scale(1.015);
 }
 
 /* ---------- Logo (inline SVG) ---------- */

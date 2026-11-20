@@ -615,7 +615,21 @@ function AssessmentApp() {
   return (
     <div className="app">
       <header className="header">
-        <img src={logo} alt="Agent Bleu" className="header-logo" />
+        <img
+          src={logo}
+          alt="Agent Bleu"
+          className="header-logo"
+          onClick={() => navigate('/landing')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/landing');
+            }
+          }}
+          title="Go to Landing Page"
+        />
       </header>
 
       <main className="wrap">
@@ -938,7 +952,9 @@ function App() {
     return (
       <div className="app">
         <header className="header">
-          <img src={logo} alt="Agent Bleu" className="header-logo" />
+          <a href="/landing" title="Go to Landing Page" style={{ display: 'inline-block' }}>
+            <img src={logo} alt="Agent Bleu" className="header-logo" />
+          </a>
         </header>
         <main className="wrap" style={{ textAlign: 'center', paddingTop: '4rem' }}>
           <p>Loading…</p>
@@ -952,6 +968,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/landing" element={<Landing />} />
         <Route
           path="/"
           element={

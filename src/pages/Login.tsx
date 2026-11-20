@@ -34,7 +34,21 @@ export default function Login() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <img src={logo} alt="Agent Bleu" className="auth-logo" />
+        <img
+          src={logo}
+          alt="Agent Bleu"
+          className="auth-logo"
+          onClick={() => navigate('/')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/');
+            }
+          }}
+          title="Back to Landing Page"
+        />
         <h1>Welcome back</h1>
         <p>Sign in to continue your assessment</p>
         {error && <div className="err" role="alert">{error}</div>}
