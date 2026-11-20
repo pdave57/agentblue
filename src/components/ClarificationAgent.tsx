@@ -24,12 +24,16 @@ interface ClarificationAgentProps {
   sessionId: string | null;
   result: TemperamentResult;
   reportId?: string | null;
+  externalPrompt?: string | null;
+  onClearExternalPrompt?: () => void;
 }
 
 export default function ClarificationAgent({
   sessionId,
   result,
   reportId,
+  externalPrompt,
+  onClearExternalPrompt,
 }: ClarificationAgentProps) {
   const dominant = result.dominant || 'Sanguine';
   const scores = result.scores || {};
@@ -162,8 +166,31 @@ I'm here to help you unpack what this means. What would you like to explore or c
     ]);
   };
 
+  const handleSendPromptRef = useRef(handleSendPrompt);
+  const onClearRef = useRef(onClearExternalPrompt);
+
+  useEffect(() => {
+    handleSendPromptRef.current = handleSendPrompt;
+    onClearRef.current = onClearExternalPrompt;
+  });
+
+  useEffect(() => {
+    if (externalPrompt && externalPrompt.trim()) {
+      handleSendPromptRef.current(externalPrompt);
+      if (onClearRef.current) {
+        onClearRef.current();
+      }
+      setTimeout(() => {
+        const el = document.getElementById('clarification-agent-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [externalPrompt]);
+
   return (
-    <section className="clarification-agent-section" aria-label="AI Clarification Agent">
+    <section id="clarification-agent-section" className="clarification-agent-section" aria-label="AI Clarification Agent">
       <div className="agent-container">
         {/* Agent Header */}
         <div className="agent-header">
@@ -373,6 +400,42 @@ function generateLocalClarification(
   const secondary = sortedDims.find(([dim]) => dim !== dominant)?.[0] || 'Phlegmatic';
   const secondaryScore = scores[secondary] ?? 50;
   const dominantScore = scores[dominant] ?? 70;
+
+  // 0. EMOTION CHECK-IN / MOMENTARY STATE INQUIRY
+  if (
+    q.includes('emotion check-in') ||
+    q.includes('logged an emotion') ||
+    q.includes('momentary emotional experience') ||
+    q.includes('feeling anxiety') ||
+    q.includes('feeling stress') ||
+    q.includes('feeling anger') ||
+    q.includes('feeling sadness') ||
+    q.includes('feeling joy') ||
+    q.includes('feeling fear')
+  ) {
+    const profileAdvice =
+      dominant === 'Choleric'
+        ? 'As a Choleric dominant, when high-arousal emotions (like stress, frustration, or pressure) rise, your constitutional instinct is often to push harder, take immediate control, or eliminate the obstacle forcefully. While this drive is powerful for execution, acute emotional spikes can trigger tunnel vision. Acknowledge the somatic signal your body is communicating, pause for a 2-minute physiological reset, and then channel that energy toward one prioritized, high-leverage action.'
+        : dominant === 'Sanguine'
+        ? 'As a Sanguine dominant, your emotional valence tends to move rapidly. Under distress or overstimulation, you may instinctively seek distraction, external reassurance, or jump between topics. Remember that your current state is an emotional wave, not your permanent identity. Taking a somatic pause—stepping away from screens and taking 5 measured diaphragmatic breaths—allows your natural optimism and big-picture perspective to re-stabilize.'
+        : dominant === 'Melancholic'
+        ? 'As a Melancholic dominant, you process emotions deeply and introspectively. When facing acute worry, vulnerability, or frustration, your analytical mind can begin dissecting every variable, searching for flaws, or looping in rumination. Practicing emotional agility here means recognizing: "I notice a feeling of tension right now" rather than identifying with it as a personal failure. Anchor in sensory reality: feel the ground beneath your feet and intentionally soften your jaw and shoulders.'
+        : 'As a Phlegmatic dominant, you place a high premium on inner equilibrium and relational peace. Under stress, your habitual protective coping strategy is withdrawal, minimizing the issue, or putting off friction. Acknowledge this momentary feeling directly rather than absorbing or swallowing it. Giving words to what you feel, even privately, prevents subtle burnout and protects your energy reserves.';
+
+    return `Thank you for logging your momentary emotion check-in. This demonstrates a vital distinction in psychological science:
+
+• **Temperament Tendency (${dominant} - ${dominantScore}%):** Your constitutional nervous system baseline and natural reactivity.
+• **Current Emotional Experience:** The dynamic, situational state you are navigating in this moment.
+• **Emotional Skill:** Your conscious capacity to observe, name, and regulate this experience without self-judgment.
+
+### How this interacts with your ${dominant} profile:
+${profileAdvice}
+
+### Recommended Immediate Self-Regulation Practice:
+1. **Notice & Name:** Label the feeling without judgment (*"I notice this presence of emotion in my body right now"*).
+2. **Physiological Sigh:** Take two quick inhales through the nose followed by a long, slow exhale through the mouth to rapidly reset autonomic nervous arousal.
+3. **Micro-Choice:** Pick one supportive action from your check-in that gives you breathing room right now.`;
+  }
 
   // 1. STRENGTHS
   if (q.includes('strength') || q.includes('superpower') || q.includes('good at') || q.includes('excel') || q.includes('best at')) {

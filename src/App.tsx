@@ -20,6 +20,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
 import ClarificationAgent from './components/ClarificationAgent';
+import EmotionCheckIn from './components/EmotionCheckIn';
 
 import './App.css';
 
@@ -105,6 +106,8 @@ function AssessmentApp() {
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [reportId, setReportId] = useState<string | null>(null);
   const [downloadingReport, setDownloadingReport] = useState(false);
+  const [agentExternalPrompt, setAgentExternalPrompt] = useState<string | null>(null);
+  const [showIntroCheckIn, setShowIntroCheckIn] = useState(false);
 
   const controllerRef = useRef<ReturnType<typeof streamQuestions> | null>(null);
   const resultStreamRef = useRef<ReturnType<typeof streamAssessmentResult> | null>(null);
@@ -131,6 +134,8 @@ function AssessmentApp() {
     setRecommendations([]);
     setReportId(null);
     setDownloadingReport(false);
+    setAgentExternalPrompt(null);
+    setShowIntroCheckIn(false);
     setView('intro');
     setLoading(false);
     runIdRef.current += 1;
@@ -563,10 +568,26 @@ function AssessmentApp() {
               Each question has no right or wrong answer. Pick the response closest to your
               first instinct.
             </p>
-            {loading ? (
-              <button className="btn" disabled>Connecting…</button>
-            ) : (
-              <button className="btn" id="start" onClick={handleStart}>Start</button>
+            <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+              {loading ? (
+                <button className="btn" disabled>Connecting…</button>
+              ) : (
+                <button className="btn" id="start" onClick={handleStart}>Start Assessment</button>
+              )}
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => setShowIntroCheckIn((v) => !v)}
+              >
+                {showIntroCheckIn ? 'Hide Check-in' : 'Momentary Emotion Check-in'}
+              </button>
+            </div>
+
+            {showIntroCheckIn && (
+              <EmotionCheckIn
+                sessionId={sessionId}
+                onClose={() => setShowIntroCheckIn(false)}
+              />
             )}
           </section>
         )}
@@ -794,11 +815,20 @@ function AssessmentApp() {
                   )}
                 </section>
 
+                {/* Momentary Emotion Check-in */}
+                <EmotionCheckIn
+                  sessionId={sessionId}
+                  dominantTemperament={result.dominant}
+                  onDiscussWithAgent={(prompt) => setAgentExternalPrompt(prompt)}
+                />
+
                 {/* Conversational AI Agent for Clarification */}
                 <ClarificationAgent
                   sessionId={sessionId}
                   result={result}
                   reportId={reportId}
+                  externalPrompt={agentExternalPrompt}
+                  onClearExternalPrompt={() => setAgentExternalPrompt(null)}
                 />
 
                 <div className="result-meta">
