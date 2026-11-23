@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
+import SEO from '../components/seo/SEO';  
+import OrganizationSchema from '../components/seo/OrganizationSchema';
+import WebsiteSchema from '../components/seo/WebsiteSchema';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -12,7 +15,13 @@ export default function Landing() {
   };
 
   return (
+    
     <div className="landing">
+      <SEO
+        title="Agent Bleu – AI-Powered Personality Assessment"
+        description="Discover yourself, understand your temperament, and achieve personal growth with Agent Bleu, your AI-powered personal development companion."
+        path="/landing"
+      />
       {/* ── Nav ── */}
       <nav className="landing-nav">
         <img
@@ -290,6 +299,8 @@ export default function Landing() {
           <a href="#privacy">Privacy notice</a>
         </p>
       </footer>
+      <OrganizationSchema />
+      <WebsiteSchema />
     </div>
   );
 }

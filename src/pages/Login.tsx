@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
+import SEO from '../components/seo/SEO';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -33,6 +34,11 @@ export default function Login() {
 
   return (
     <div className="auth-page">
+      <SEO
+        title="My Assessment Results"        
+        path="/dashboard/results"
+        noIndex
+      />
       <div className="auth-card">
         <img
           src={logo}
