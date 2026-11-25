@@ -656,21 +656,21 @@ function AssessmentApp() {
               ) : (
                 <button className="btn" id="start" onClick={handleStart}>Start Assessment</button>
               )}
-              <button
+              {/* <button
                 type="button"
                 className="btn ghost"
                 onClick={() => setShowIntroCheckIn((v) => !v)}
               >
                 {showIntroCheckIn ? 'Hide Check-in' : 'Momentary Emotion Check-in'}
-              </button>
+              </button> */}
             </div>
 
-            {showIntroCheckIn && (
+            {/* {showIntroCheckIn && (
               <EmotionCheckIn
                 sessionId={sessionId}
                 onClose={() => setShowIntroCheckIn(false)}
               />
-            )}
+            )} */}
           </section>
         )}
 
