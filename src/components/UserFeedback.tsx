@@ -99,9 +99,9 @@ export default function UserFeedback({ sessionId }: UserFeedbackProps) {
   const isReviewer = user?.email?.toLowerCase() === REVIEWER_EMAIL;
 
   const [survey, setSurvey] = useState<FeedbackQuestionsResponse>(DEFAULT_SURVEY);
-  const [experienceRating, setExperienceRating] = useState<number | null>(null);
-  const [easeOfUse, setEaseOfUse] = useState<number | null>(null);
-  const [insightfulness, setInsightfulness] = useState<number | null>(null);
+  const [experienceRating, setExperienceRating] = useState<number>(5);
+  const [easeOfUse, setEaseOfUse] = useState<number>(3);
+  const [insightfulness, setInsightfulness] = useState<number>(3);
   const [mostValuableAspect, setMostValuableAspect] = useState<ValuableAspect | null>(null);
   const [wouldRecommend, setWouldRecommend] = useState<boolean>(true);
   const [improvementComment, setImprovementComment] = useState<string>('');
@@ -335,69 +335,67 @@ export default function UserFeedback({ sessionId }: UserFeedbackProps) {
           )}
 
           {orderedQuestions.map((q) => {
-            if (q.kind === 'scale_1_10') {
+            if (q.kind === 'scale_1_10' || q.kind === 'scale_1_5') {
+              const isTen = q.kind === 'scale_1_10';
               const min = q.min_value ?? 1;
-              const max = q.max_value ?? 10;
+              const max = q.max_value ?? (isTen ? 10 : 5);
+              const val = isTen
+                ? experienceRating
+                : q.id === 'ease_of_use'
+                ? easeOfUse
+                : insightfulness;
+              const setter = isTen
+                ? setExperienceRating
+                : q.id === 'ease_of_use'
+                ? setEaseOfUse
+                : setInsightfulness;
               const nums = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+              const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+
               return (
                 <div key={q.id} className="feedback-q">
-                  <label className="feedback-q-label">
-                    <span>
-                      {q.order}. {q.prompt}
+                  <div className="feedback-q-head">
+                    <label className="feedback-q-label" htmlFor={`feedback-slider-${q.id}`}>
+                      <span>
+                        {q.order}. {q.prompt}
+                      </span>
+                      {q.required && <span className="feedback-req">*</span>}
+                    </label>
+                    <span className="feedback-value-pill">
+                      {val}/{max}
                     </span>
-                    {q.required && <span className="feedback-req">*</span>}
-                  </label>
-                  <div className="feedback-scale-10" role="radiogroup" aria-label={q.prompt}>
-                    {nums.map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        className={`feedback-num-btn ${experienceRating === n ? 'active' : ''}`}
-                        onClick={() => setExperienceRating(n)}
-                        aria-pressed={experienceRating === n}
-                      >
-                        {n}
-                      </button>
-                    ))}
                   </div>
-                  {(q.min_label || q.max_label) && (
-                    <div className="feedback-scale-labels">
-                      <span>{q.min_label}</span>
-                      <span>{q.max_label}</span>
+
+                  <div className="feedback-slider-box">
+                    <input
+                      id={`feedback-slider-${q.id}`}
+                      type="range"
+                      min={min}
+                      max={max}
+                      step={1}
+                      value={val}
+                      onChange={(e) => setter(Number(e.target.value))}
+                      className="feedback-slider"
+                      style={{
+                        background: `linear-gradient(90deg, var(--blue) 0%, var(--sky) ${pct}%, var(--line) ${pct}%)`,
+                      }}
+                      aria-label={q.prompt}
+                    />
+                    <div className="feedback-ticks" aria-hidden="true">
+                      {nums.map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          tabIndex={-1}
+                          className={`feedback-tick-btn ${val === n ? 'active' : ''}`}
+                          onClick={() => setter(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
-              );
-            }
-
-            if (q.kind === 'scale_1_5') {
-              const min = q.min_value ?? 1;
-              const max = q.max_value ?? 5;
-              const nums = Array.from({ length: max - min + 1 }, (_, i) => min + i);
-              const val = q.id === 'ease_of_use' ? easeOfUse : insightfulness;
-              const setter = q.id === 'ease_of_use' ? setEaseOfUse : setInsightfulness;
-
-              return (
-                <div key={q.id} className="feedback-q">
-                  <label className="feedback-q-label">
-                    <span>
-                      {q.order}. {q.prompt}
-                    </span>
-                    {q.required && <span className="feedback-req">*</span>}
-                  </label>
-                  <div className="feedback-scale-5" role="radiogroup" aria-label={q.prompt}>
-                    {nums.map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        className={`feedback-num-btn ${val === n ? 'active' : ''}`}
-                        onClick={() => setter(n)}
-                        aria-pressed={val === n}
-                      >
-                        {n}
-                      </button>
-                    ))}
                   </div>
+
                   {(q.min_label || q.max_label) && (
                     <div className="feedback-scale-labels">
                       <span>{q.min_label}</span>
