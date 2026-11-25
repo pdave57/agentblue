@@ -665,12 +665,12 @@ function AssessmentApp() {
               </button> */}
             </div>
 
-            {/* {showIntroCheckIn && (
+            {showIntroCheckIn && (
               <EmotionCheckIn
                 sessionId={sessionId}
                 onClose={() => setShowIntroCheckIn(false)}
               />
-            )} */}
+            )}
           </section>
         )}
 
