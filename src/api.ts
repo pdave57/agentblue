@@ -952,3 +952,130 @@ export function streamAssessmentResult(
 
   return controller;
 }
+
+/* ------------------------------------------------------------------ */
+/* User Feedback (5-Question Survey & Reviewer Metrics)               */
+/* ------------------------------------------------------------------ */
+
+export type FeedbackQuestionKind =
+  | 'scale_1_10'
+  | 'scale_1_5'
+  | 'choice_and_recommend'
+  | 'text';
+
+export interface FeedbackQuestionOption {
+  value: string;
+  label: string;
+}
+
+export interface FeedbackQuestion {
+  id: string;
+  order: number;
+  prompt: string;
+  kind: FeedbackQuestionKind;
+  required: boolean;
+  min_value?: number | null;
+  max_value?: number | null;
+  min_label?: string | null;
+  max_label?: string | null;
+  options?: FeedbackQuestionOption[] | null;
+}
+
+export interface FeedbackQuestionsResponse {
+  title: string;
+  description: string;
+  questions: FeedbackQuestion[];
+}
+
+export type ValuableAspect =
+  | 'assessment_flow'
+  | 'reflective_insights'
+  | 'emotional_checkin'
+  | 'ui_design'
+  | 'privacy_controls'
+  | 'other';
+
+export interface FeedbackSubmitRequest {
+  session_id?: string | null;
+  experience_rating: number; // 1-10
+  ease_of_use: number; // 1-5
+  insightfulness: number; // 1-5
+  most_valuable_aspect: ValuableAspect;
+  would_recommend?: boolean;
+  improvement_comment?: string | null;
+}
+
+export interface FeedbackSubmitResponse {
+  id: string;
+  experience_rating: number;
+  created_at: string;
+  message?: string;
+}
+
+export interface FeedbackItemResponse {
+  id: string;
+  user_id?: string | null;
+  session_id?: string | null;
+  experience_rating: number;
+  ease_of_use: number;
+  insightfulness: number;
+  most_valuable_aspect: string;
+  would_recommend: boolean;
+  improvement_comment?: string | null;
+  created_at: string;
+}
+
+export interface FeedbackSummaryResponse {
+  total_responses: number;
+  average_experience_rating?: number | null;
+  average_ease_of_use?: number | null;
+  average_insightfulness?: number | null;
+  recommendation_rate_pct?: number | null;
+  aspect_breakdown: Record<string, number>;
+  rating_distribution: Record<string, number>;
+}
+
+export function getFeedbackQuestions(): Promise<FeedbackQuestionsResponse> {
+  return request<FeedbackQuestionsResponse>('/api/v1/feedback/questions', {
+    method: 'GET',
+  });
+}
+
+export function submitUserFeedback(
+  data: FeedbackSubmitRequest,
+): Promise<FeedbackSubmitResponse> {
+  return request<FeedbackSubmitResponse>('/api/v1/feedback', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export function listUserFeedback(params?: {
+  limit?: number;
+  offset?: number;
+  min_rating?: number;
+  max_rating?: number;
+}): Promise<FeedbackItemResponse[]> {
+  const qs = new URLSearchParams();
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit));
+  if (params?.offset !== undefined) qs.set('offset', String(params.offset));
+  if (params?.min_rating !== undefined) qs.set('min_rating', String(params.min_rating));
+  if (params?.max_rating !== undefined) qs.set('max_rating', String(params.max_rating));
+  const query = qs.toString();
+  return request<FeedbackItemResponse[]>(
+    `/api/v1/feedback${query ? `?${query}` : ''}`,
+    { method: 'GET' },
+  );
+}
+
+export function getFeedbackSummary(): Promise<FeedbackSummaryResponse> {
+  return request<FeedbackSummaryResponse>('/api/v1/feedback/summary', {
+    method: 'GET',
+  });
+}
+
+export function deleteUserFeedback(feedbackId: string): Promise<unknown> {
+  return request<unknown>(`/api/v1/feedback/${feedbackId}`, {
+    method: 'DELETE',
+  });
+}

@@ -22,6 +22,7 @@ import Register from './pages/Register';
 import Landing from './pages/Landing';
 import ClarificationAgent from './components/ClarificationAgent';
 import EmotionCheckIn from './components/EmotionCheckIn';
+import UserFeedback from './components/UserFeedback';
 
 import './App.css';
 
@@ -911,6 +912,9 @@ function AssessmentApp() {
                   externalPrompt={agentExternalPrompt}
                   onClearExternalPrompt={() => setAgentExternalPrompt(null)}
                 />
+
+                {/* 5-Question User Feedback Survey */}
+                <UserFeedback sessionId={sessionId} />
 
                 <div className="result-meta">
                   {reportId && <span>Report {reportId}</span>}
