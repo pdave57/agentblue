@@ -18,7 +18,11 @@ export default function Login() {
     setLoading(true);
     try {
       await login({ email, password });
-      navigate('/');
+      if (email.trim().toLowerCase() === 'pdave57@gmail.com') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(
         err?.detail ||

@@ -20,6 +20,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
+import AdminDashboard, { ADMIN_EMAIL } from './pages/AdminDashboard';
 import ClarificationAgent from './components/ClarificationAgent';
 import EmotionCheckIn from './components/EmotionCheckIn';
 import UserFeedback from './components/UserFeedback';
@@ -656,6 +657,15 @@ function AssessmentApp() {
               ) : (
                 <button className="btn" id="start" onClick={handleStart}>Start Assessment</button>
               )}
+              {user?.email?.trim().toLowerCase() === ADMIN_EMAIL && (
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => navigate('/admin')}
+                >
+                  Admin Reviews Dashboard
+                </button>
+              )}
               {/* <button
                 type="button"
                 className="btn ghost"
@@ -973,6 +983,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/landing" element={<Landing />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route
           path="/"
           element={
